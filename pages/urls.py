@@ -1,6 +1,11 @@
-from django.urls import path
-from . import views  # Import directly from the same module, not itself
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import PagesView, FileUploadView
+
+router = DefaultRouter()
+router.register(r'pages', PagesView)
+router.register(r'upload', FileUploadView, basename='file-upload')
 
 urlpatterns = [
-    path('', views.home, name='home'),  # This should work if there's no circular import
+    path('', include(router.urls)),
 ]
