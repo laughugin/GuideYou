@@ -11,11 +11,19 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv()  
 
+
+VISION_API_KEY = os.getenv('VISION_API_KEY')
+MAPS_API_KEY = os.getenv('MAPS_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+DIRECTIONS_API_KEY = os.getenv('DIRECTIONS_API_KEY')
+PLACES_API_KEY = os.getenv('PLACES_API_KEY')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
