@@ -1,0 +1,12 @@
+.hotel-card-container {
+    display: flex;
+    justify-content: center; /* Center the cards */
+    margin: 10px; /* Add some spacing between cards */
+  }
+  
+  .card {
+    height: 400px; /* Set a fixed height */
+    width: 100%; /* Use 100% to fill the container */
+    overflow: hidden; /* Ensure content does not overflow */
+  }
+  

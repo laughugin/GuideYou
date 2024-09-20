@@ -47,16 +47,12 @@ class FileUploadView(viewsets.ViewSet):
         if 'error' in location_response:
             return Response(location_response, status=400)
 
-        # Get directions and nearby hotels
         directions = self.get_directions(user_location, location_response)
-        print("Directions Response:", directions)  # Debugging
-
         hotels = self.get_nearby_hotels(location_response)
-        print("Hotels Response:", hotels)  # Debugging
 
         return Response({
             "location": location_response,
-            "generated_location_name": location_response,  
+            "generated_location_name": location_response,
             "directions": directions,
             "hotels": hotels
         }, status=200)
@@ -68,8 +64,6 @@ class FileUploadView(viewsets.ViewSet):
         vision_api_key = settings.VISION_API_KEY
         maps_api_key = settings.MAPS_API_KEY
         openai_api_key = settings.OPENAI_API_KEY
-        print(vision_api_key + '\n' + maps_api_key + '\n' + openai_api_key)
-
 
         # Create the request payload for Google Vision API
         request_data = {
@@ -113,7 +107,7 @@ class FileUploadView(viewsets.ViewSet):
 
     def get_location_from_chatgpt(self, descriptions, openai_api_key):
         openai.api_key = openai_api_key
-        prompt = "Based on the following descriptions and their scores, identify the most probable location:\n\n"
+        prompt = "Based on the following descriptions and their scores, identify the most probable location in a form of ' location + City(where location is)':\n\n"
         prompt += "\n".join(descriptions)
 
         try:
@@ -130,7 +124,6 @@ class FileUploadView(viewsets.ViewSet):
             print("Location identified:", location_name)
             return location_name
         except Exception as e:
-            print("Error calling OpenAI API:", e)
             return None
 
     def get_coordinates(self, location_name, maps_api_key):
@@ -142,7 +135,6 @@ class FileUploadView(viewsets.ViewSet):
             results = geocode_data.get('results', [])
             if results:
                 location = results[0].get('geometry', {}).get('location', {})
-                print("Coordinates found:", location)
                 return {'lat': location.get('lat'), 'lng': location.get('lng')}
             else:
                 return {'error': f"No coordinates found for {location_name}."}
@@ -150,7 +142,6 @@ class FileUploadView(viewsets.ViewSet):
             return {'error': f"Geocoding API Error: {response.status_code}"}
 
     def get_directions(self, user_location, destination_coordinates):
-        print('Getting directions...')  
         directions_api_key = settings.DIRECTIONS_API_KEY  
         directions_url = (
             f"https://maps.googleapis.com/maps/api/directions/json?"
@@ -159,7 +150,6 @@ class FileUploadView(viewsets.ViewSet):
             f"key={directions_api_key}"
         )
         response = requests.get(directions_url)
-        print("Directions API Response:", response.json())  
         if response.status_code == 200:
             directions_data = response.json()
             if directions_data['status'] == 'OK':
@@ -176,24 +166,29 @@ class FileUploadView(viewsets.ViewSet):
             f"location={coordinates['lat']},{coordinates['lng']}&"
             f"radius=5000&type=lodging&key={places_api_key}"
         )
-        print('Getting nearby hotels...')  
-    
+
         response = requests.get(places_url)
-        print("Places API Response:", response.json())  
-    
+
         if response.status_code == 200:
             places_data = response.json()
             if places_data['status'] == 'OK':
                 hotels = []
                 for place in places_data.get('results', []):
-                    hotels.append({
+                    hotel_data = {
                         'name': place['name'],
                         'address': place['vicinity'],
                         'rating': place.get('rating'),
-                        'price_level': place.get('price_level')  
-                    })
-                # Limit hotels to 6
-                return hotels[:6]
+                        'price_level': place.get('price_level'),
+                    }
+
+                    # Get the first photo reference if available
+                    photos = place.get('photos', [])
+                    if photos:
+                        # Construct the photo URL using the reference
+                        hotel_data['image'] = f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photos[0]['photo_reference']}&key={places_api_key}"
+
+                    hotels.append(hotel_data)
+                return hotels
             else:
                 return {'error': places_data['status']}
         else:

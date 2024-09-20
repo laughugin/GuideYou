@@ -36,3 +36,17 @@
     transform: rotate(360deg);
   }
 }
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #333;
+  padding: 10px;
+  z-index: 1000; /* Ensures header is above other content */
+}
+
+.container {
+  padding-top: 60px; /* Add extra padding if needed */
+}
