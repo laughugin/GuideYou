@@ -22,6 +22,7 @@
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
+
 }
 
 .App-link {
@@ -42,11 +43,12 @@ header {
   top: 0;
   left: 0;
   right: 0;
-  background-color: #333;
+  background-color: #000000;
   padding: 10px;
-  z-index: 1000; /* Ensures header is above other content */
+  z-index: 1000;
+  outline: 5px solid white; /* Updated this line */
 }
 
 .container {
-  padding-top: 60px; /* Add extra padding if needed */
+  padding-top: 60px; 
 }

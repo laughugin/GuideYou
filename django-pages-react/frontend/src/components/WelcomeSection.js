@@ -36,7 +36,7 @@ const WelcomeSection = ({ onScrollDown }) => {
             Easily upload images of landmarks to discover their locations. Get step-by-step directions from your current location and explore nearby hotels with ratings and photos. Filter and sort hotel options to find the perfect stay.
           </Typography>
           <Typography variant="h5" paragraph>
-            Start your adventure today! Try now!
+            Start your adventure! Try now!
           </Typography>
         </Box>
 
