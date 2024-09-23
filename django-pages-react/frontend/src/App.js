@@ -5,7 +5,6 @@ import WelcomeSection from "./components/WelcomeSection";
 import Directions from "./components/Directions";
 import HotelList from './components/HotelList';
 import { Card, Slider, CardContent, Typography, Box, Button, FormControl, InputLabel, Select, MenuItem, CircularProgress, IconButton } from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
@@ -27,6 +26,7 @@ class App extends Component {
       filterVisible: false,
       dataFetched: false,
     };
+    this.welcomeRef = React.createRef();
     this.uploadRef = React.createRef();
     this.directionsRef = React.createRef();
     this.accommodationRef = React.createRef();
@@ -145,7 +145,7 @@ class App extends Component {
 
   scrollToSection = (ref) => {
     if (ref.current) {
-      window.scrollTo({ top: ref.current.offsetTop - 20, behavior: 'smooth' }); // Adjusted for better view
+      window.scrollTo({ top: ref.current.offsetTop - 20, behavior: 'smooth' }); 
     }
   };
 
@@ -159,12 +159,13 @@ class App extends Component {
         <header style={{ position: 'fixed', top: 0, left: 0, right: 0, backgroundColor: '#000000', padding: '10px', zIndex: 1000 }}>
           <h1 className="text text-uppercase text-left" style={{ color: '#ffffff', marginLeft: '20px' }}>TravelNavigator</h1>
         </header>
-
-        <WelcomeSection onScrollDown={() => this.scrollToSection(this.uploadRef)} />
+        <div ref={this.welcomeRef}>
+          <WelcomeSection onScrollDown={() => this.scrollToSection(this.uploadRef)} />
+        </div>
 
         <div ref={this.uploadRef} style={{ marginBottom: '80px', paddingBottom: '80%' }}> {/* Added paddingTop for fixed header */}
           <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-            <IconButton onClick={() => this.scrollToSection(this.uploadRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
+            <IconButton onClick={() => this.scrollToSection(this.welcomeRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
               <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
             </IconButton>
           </Box>
@@ -173,7 +174,7 @@ class App extends Component {
             <div style={{ textAlign: 'center' }}>
               <h1 style={{ color: '#ffffff' }}>Detected Location: {locationResponse?.location_name || 'Unknown'}</h1>
               <h3>Uploaded Image:</h3>
-              <img src={uploadedFile} alt="Uploaded" style={{ width: '50%', height: '50%', borderRadius: '10px' }} />
+              <img src={uploadedFile} alt="Uploaded" style={{ width: '60%', height: '60%', borderRadius: '10px' }} />
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
                 <Button
                   variant="contained"
@@ -187,9 +188,13 @@ class App extends Component {
               
             </div>
           ) : (
-            <DropzoneComponent onDrop={this.handleDrop}>
-              {loading && <CircularProgress style={{ marginTop: '20px' }} />}
-            </DropzoneComponent>
+            <div>
+              <h1 style={{textAlign: 'center', color: 'white', marginTop: "2%", marginBottom: '10%'}}>Start by uploading image of your disired place...</h1>
+
+                <DropzoneComponent onDrop={this.handleDrop}>
+                  {loading && <CircularProgress style={{ marginTop: '10%' }} />}
+                </DropzoneComponent>
+            </div>
           )}
           {uploadedFile && (
             <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
@@ -200,8 +205,9 @@ class App extends Component {
           )}
         </div>
         {uploadedFile && (  
-          <div ref={this.directionsRef} style={{ paddingBottom: '70%' }}> {/* Added paddingTop for fixed header */}
-
+          <div ref={this.directionsRef} style={{ paddingBottom: '70%' }}> 
+            <h1 style={{ color: 'white', textAlign: 'center'}}>How to get there?</h1>
+            
 
             <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
               <IconButton onClick={() => this.scrollToSection(this.uploadRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
@@ -224,7 +230,7 @@ class App extends Component {
           </div>
         )}
         {uploadedFile && (
-          <div ref={this.accommodationRef} style={{ paddingTop: '70%' }}>
+          <div style={{ paddingTop: '70%' }}>
             
             <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
               <IconButton onClick={() => this.scrollToSection(this.directionsRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
@@ -234,17 +240,20 @@ class App extends Component {
             <h2 className="text text-uppercase text-center my-4" style={{ color: '#ffffff' }}>Accommodation</h2>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <Button
-                variant="outlined"
-                color="default"
-                onClick={this.handleFilterToggle}
-                sx={{ fontSize: '15px', padding: '5px 10px', backgroundColor: '#000', color: '#fff' }}
-                startIcon={<FilterListIcon />}
-              >
-                {filterVisible ? "Hide Filters" : "Show Filters"}
-              </Button>
+              <div ref={this.accommodationRef}>
 
-              {/* Sorting Options in a Flex Row */}
+                <Button
+                  variant="outlined"
+                  color="default"
+                  onClick={this.handleFilterToggle}
+                  sx={{ fontSize: '15px', padding: '5px 10px', backgroundColor: '#000', color: '#fff' }}
+                  startIcon={<FilterListIcon />}
+                >
+                  {filterVisible ? "Hide Filters" : "Show Filters"}
+                </Button>
+              </div>
+
+      
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Typography sx={{ color: '#ffffff', fontSize: '20px', marginRight: '8px' }}>Sort By</Typography>
                 <FormControl sx={{ minWidth: 100, minHeight: 50 }}>
