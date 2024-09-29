@@ -6,7 +6,7 @@ const MapComponent = ({ origin, destination }) => {
     const [directions, setDirections] = useState(null);
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
-        googleMapsApiKey: 'YOUR_API_KEY_HERE', 
+        googleMapsApiKey: 'AIzaSyAe-EHEoHXog0NqWjaO_1Ym8JSOXLoUCtw', 
         libraries: ['geometry', 'drawing'], 
     });
 
