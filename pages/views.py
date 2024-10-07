@@ -12,6 +12,8 @@ import json
 import openai
 from io import BytesIO
 from django.conf import settings
+from .models import UserLocation, DetectedLocation, DirectionStep, Hotel
+from .serializers import DetectedLocationSerializer
 
 class PagesView(viewsets.ModelViewSet):
     serializer_class = PagesSerializer
@@ -40,33 +42,56 @@ class FileUploadView(viewsets.ViewSet):
         except json.JSONDecodeError:
             return Response({"error": "Invalid JSON format for user_location."}, status=400)
 
+        # Store user location in the database
+        user_location_instance = UserLocation.objects.create(latitude=user_location['lat'], longitude=user_location['lng'])
+
+        # Detect location from the image
         location_response = self.detect_location(file)
 
         if 'error' in location_response:
             return Response(location_response, status=400)
 
+        # Store detected location in the database
+        detected_location_instance = DetectedLocation.objects.create(
+            location_name=location_response.get('location_name', ''),
+            latitude=location_response['lat'],
+            longitude=location_response['lng']
+        )
+
+        # Get directions and save each step in the database
         directions = self.get_directions(user_location, location_response)
+        if 'error' not in directions:
+            for step in directions:
+                DirectionStep.objects.create(
+                    detected_location=detected_location_instance,
+                    instruction=step['html_instructions'],
+                    distance=step['distance']['text'],
+                    duration=step['duration']['text']
+                )
+
+        # Get nearby hotels and save each hotel in the database
         hotels = self.get_nearby_hotels(location_response)
-        
-        guessed_location_name = location_response.get('location_name', '')
-        guessed_coordinates = {'lat': location_response['lat'], 'lng': location_response['lng']}
+        if 'error' not in hotels:
+            guessed_coordinates = {'lat': location_response['lat'], 'lng': location_response['lng']}
+            for hotel in hotels:
+                hotel_coords = {'lat': hotel['lat'], 'lng': hotel['lng']}
+                distance = self.calculate_distance(guessed_coordinates, hotel_coords)
+
+                Hotel.objects.create(
+                    detected_location=detected_location_instance,
+                    name=hotel['name'],
+                    address=hotel['address'],
+                    rating=hotel.get('rating'),
+                    latitude=hotel['lat'],
+                    longitude=hotel['lng'],
+                    image_url=hotel.get('image'),
+                    distance=distance
+                )
 
         
-        for hotel in hotels:
-            hotel_coords = {'lat': hotel['lat'], 'lng': hotel['lng']}
-            distance = self.calculate_distance(guessed_coordinates, hotel_coords)
-            hotel['distance'] = distance
-
-        
-        print("Guessed Location Name:", guessed_location_name)
-
-        return Response({
-            "location": location_response,
-            "guessed_location_name": guessed_location_name,
-            "guessed_coordinates": guessed_coordinates,
-            "directions": directions,
-            "hotels": hotels
-        }, status=200)
+        detected_location_serializer = DetectedLocationSerializer(detected_location_instance)
+        print(detected_location_serializer)
+        return Response(detected_location_serializer.data, status=200)
 
     def detect_location(self, file):
         image_data = BytesIO(file.read())
@@ -231,7 +256,7 @@ class FileUploadView(viewsets.ViewSet):
                         'lat': place['geometry']['location']['lat'],
                         'lng': place['geometry']['location']['lng'],
                     }
-
+                    
                     # Get the first photo reference if available
                     photos = place.get('photos', [])
                     if photos:
