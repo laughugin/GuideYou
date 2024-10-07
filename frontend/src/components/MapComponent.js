@@ -3,10 +3,11 @@ import { GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
 import { useJsApiLoader } from '@react-google-maps/api'; 
 
 const MapComponent = ({ origin, destination }) => {
+    const googleMapsApiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY
     const [directions, setDirections] = useState(null);
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
-        googleMapsApiKey: 'AIzaSyAe-EHEoHXog0NqWjaO_1Ym8JSOXLoUCtw', 
+        googleMapsApiKey: {googleMapsApiKey}, 
         libraries: ['geometry', 'drawing'], 
     });
 
