@@ -4,6 +4,8 @@ import DropzoneComponent from "./components/DropzoneComponent";
 import WelcomeSection from "./components/WelcomeSection";
 import Directions from "./components/Directions";
 import HotelList from './components/HotelList';
+import LocationHistory from "./components/LocationHistory";
+import { BrowserRouter as Router, Route, Link, Routes } from "react-router-dom";
 import { Slider, Typography, Box, Button, FormControl,Select, MenuItem, CircularProgress, IconButton } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import GoogleIcon from '@mui/icons-material/Google';
@@ -23,6 +25,7 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      userId: '',
       coordinates: null,
       userLocation: null,
       directions: null,
@@ -63,6 +66,11 @@ class App extends Component {
   componentDidMount() {
     this.getUserLocation();
   
+    const savedHistory = localStorage.getItem('searchHistory');
+    if (savedHistory) {
+      this.setState({ searchHistory: JSON.parse(savedHistory) });
+    }
+
     const savedUserPayload = localStorage.getItem('userPayload');
     if (savedUserPayload) {
       const userPayload = JSON.parse(savedUserPayload);
@@ -83,8 +91,8 @@ class App extends Component {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const { latitude, longitude } = position.coords;
-          this.setState({ userLocation: { lat: latitude, lng: longitude } }, () => {
+          const { lat, lng } = position.coords;
+          this.setState({ userLocation: { lat: lat, lng: lng } }, () => {
             this.sendUserLocationToBackend(this.state.userLocation);
           });
         },
@@ -105,6 +113,20 @@ class App extends Component {
       .catch(error => console.error("Error sending user location:", error));
   };
 
+  updateSearchHistory = (locationName) => {
+    this.setState(prevState => ({
+      searchHistory: [...prevState.searchHistory, locationName]
+    }), () => {
+      localStorage.setItem('searchHistory', JSON.stringify(this.state.searchHistory)); 
+    });
+  };
+  
+  clearSearchHistory = () => {
+    this.setState({ searchHistory: [] }, () => {
+      localStorage.removeItem('searchHistory'); 
+    });
+  };
+
   decodeJwt = (token) => {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -123,16 +145,18 @@ class App extends Component {
       userPayload, 
       userName: userPayload.name,
       userProfilePic: userPayload.picture,
+      userId: userPayload.sub,
     });
-  
+    console.log(userPayload.sub)
+    console.log(this.state.userId);
     localStorage.setItem('userPayload', JSON.stringify(userPayload));
-  
     console.log('User Info:', userPayload);
   };
   
   handleLogout = () => {
     this.setState({
       userPayload: null, 
+      userId: '',
       userName: '',
       userProfilePic: '',
     });
@@ -149,41 +173,47 @@ class App extends Component {
     const file = acceptedFiles[0];
     const formData = new FormData();
     formData.append("file", file);
-
-    const { userLocation } = this.state;
+    const { userPayload,userLocation } = this.state;
+    
+    console.log(userPayload.sub);
+    formData.append("user_id", userPayload.sub);
     if (userLocation) {
       formData.append("user_location", JSON.stringify(userLocation));
+      console.log(formData)
     } else {
       console.error("User location is not available");
     }
 
     this.setState({ loading: true });
 
-    axios.post("http://127.0.0.1:8000/api/upload/", formData)
-      .then(response => {
-        const { directions, hotels, location, guessed_location_name, guessed_coordinates } = response.data;
-        console.log("Response data from server:", response.data);
-        console.log("Directions:", directions);
-        console.log("Hotels:", hotels);
-        console.log("Location Response:", location);
-        console.log("Guessed Location Name:", guessed_location_name);
-        console.log("Guessed Coordinates:", guessed_coordinates);
+    console.log(formData);
 
-        this.setState({
-          directions,
-          hotels,
-          locationResponse: location,
-          guessedLocationName: guessed_location_name,
-          guessedCoordinates: guessed_coordinates,
-          uploadedFile: URL.createObjectURL(file),
-          loading: false,
-          dataFetched: true,
-        });
-      })
-      .catch(error => {
-        console.error("Error uploading file:", error);
-        this.setState({ loading: false });
+    axios.post("http://127.0.0.1:8000/api/upload/", formData)
+    .then(response => {
+      const { directions, hotels, location, location_name, lat, lng } = response.data;
+      console.log("Response data from server:", response.data);
+      console.log("Directions:", directions);
+      console.log("Hotels:", hotels);
+      console.log("Location Response:", location);
+      
+  
+
+  
+      this.setState({
+        directions,
+        hotels,
+        locationResponse: location,
+        locationName: location_name,
+        guessedCoordinates: `${lat}, ${lng}`,
+        uploadedFile: URL.createObjectURL(file),
+        loading: false,
+        dataFetched: true,
       });
+    })
+    .catch(error => {
+      console.error("Error uploading file:", error);
+      this.setState({ loading: false });
+    });
   };
 
   renewUpload = () => {
@@ -193,7 +223,9 @@ class App extends Component {
       hotels: null,
       uploadedFile: null,
       locationResponse: null,
-      guessedLocationName: null,
+      locationName: null,
+      latitude: null, 
+      longitude: null,
       guessedCoordinates: null,
       dataFetched: false
     });
@@ -303,7 +335,7 @@ class App extends Component {
             
               {uploadedFile ? (
                 <div style={{ textAlign: 'center' }}>
-                  <h1 style={{ color: '#ffffff' }}>Detected Location: {locationResponse?.location_name || 'Unknown'}</h1>
+                  <h1 style={{ color: '#ffffff' }}>Detected Location: {locationResponse?.locationName || 'Unknown'}</h1>
                   <h3>Uploaded Image:</h3>
                   <img src={uploadedFile} alt="Uploaded" style={{ width: '60%', height: '60%', borderRadius: '10px' }} />
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>

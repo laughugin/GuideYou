@@ -27,9 +27,12 @@ const Directions = ({ directions }) => {
         {directions.map((step, index) => (
           <Paper key={index} elevation={3} sx={{ display: 'flex', alignItems: 'center', padding: 2, backgroundColor: '#444', borderRadius: '8px' }}>
             <Box sx={{ marginRight: 1, color: '#ffffff' }}>
-              {getDirectionIcon(step.html_instructions)}
+              {getDirectionIcon(step.instruction)} 
             </Box>
-            <Typography variant="body1" dangerouslySetInnerHTML={{ __html: step.html_instructions }} style={{ color: '#ffffff', flex: 1 }} />
+            <Typography variant="body1" dangerouslySetInnerHTML={{ __html: step.instruction }} style={{ color: '#ffffff', flex: 1 }} />
+            <Typography variant="body2" style={{ color: '#ffffff', marginLeft: 'auto' }}>
+              {`${step.distance} - ${step.duration}`}
+            </Typography>
           </Paper>
         ))}
       </Box>

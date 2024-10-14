@@ -1,21 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
 import { useJsApiLoader } from '@react-google-maps/api'; 
 
 const MapComponent = ({ origin, destination }) => {
-    const googleMapsApiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY
+    const googleMapsApiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+
+    const { isLoaded } = useJsApiLoader(
+        useMemo(() => ({
+            id: 'google-map-script',
+            googleMapsApiKey: googleMapsApiKey,
+            libraries: ['geometry', 'drawing'],
+        }), [])
+    );
+
     const [directions, setDirections] = useState(null);
-    const { isLoaded } = useJsApiLoader({
-        id: 'google-map-script',
-        googleMapsApiKey: {googleMapsApiKey}, 
-        libraries: ['geometry', 'drawing'], 
-    });
 
     const mapStyles = {
         height: "400px",
         width: "100%"
     };
-
 
     const fetchDirections = async () => {
         if (origin && destination) {
@@ -24,7 +27,7 @@ const MapComponent = ({ origin, destination }) => {
                 const directionsService = new window.google.maps.DirectionsService();
                 const result = await directionsService.route({
                     origin: new window.google.maps.LatLng(origin.lat, origin.lng),
-                    destination: new window.google.maps.LatLng(destination.lat, destination.lng),
+                    destination: new window.google.maps.LatLng(destination.lag, destination.lng),
                     travelMode: window.google.maps.TravelMode.DRIVING,
                 });
                 
@@ -45,7 +48,6 @@ const MapComponent = ({ origin, destination }) => {
     };
 
     useEffect(() => {
-     
         if (isLoaded) {
             fetchDirections();
         }

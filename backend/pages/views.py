@@ -12,8 +12,18 @@ import json
 import openai
 from io import BytesIO
 from django.conf import settings
-from .models import UserLocation, DetectedLocation, DirectionStep, Hotel
-from .serializers import DetectedLocationSerializer
+from .models import RequestLog, UserLocation, DetectedLocation, DirectionStep, Hotel
+from .serializers import DetectedLocationSerializer, SearchHistorySerializer
+from rest_framework import generics
+
+class UserSearchHistoryView(generics.ListAPIView):
+    serializer_class = SearchHistorySerializer
+
+    def get_queryset(self):
+        user_ip = self.request.GET.get('user_ip')
+        if user_ip:
+            return RequestLog.objects.filter(user_ip=user_ip).prefetch_related('user_locations', 'detected_locations')
+        return RequestLog.objects.none()  
 
 class PagesView(viewsets.ModelViewSet):
     serializer_class = PagesSerializer
@@ -28,23 +38,42 @@ class FileUploadView(viewsets.ViewSet):
     parser_classes = (MultiPartParser, FormParser)
 
     def create(self, request):
+        
+        print(request)
+
+        print("request.data:", request.data)
+        print("request.FILES:", request.FILES)
+
+
+        request_log = RequestLog.objects.create(
+            user_ip=request.META.get('REMOTE_ADDR'),  
+            user_agent=request.META.get('HTTP_USER_AGENT')  
+        )
+
         file = request.FILES.get('file')
         user_location_data = request.data.get('user_location')
+        user_id = request.data.get('user_id')
 
         if not file:
             return Response({"error": "File is required."}, status=400)
 
         if not user_location_data:
             return Response({"error": "user_location is required."}, status=400)
+        
+        if not user_id:
+            return Response({"error": "user_id is required."}, status=400)
 
         try:
             user_location = json.loads(user_location_data)
         except json.JSONDecodeError:
             return Response({"error": "Invalid JSON format for user_location."}, status=400)
 
-        # Store user location in the database
-        user_location_instance = UserLocation.objects.create(latitude=user_location['lat'], longitude=user_location['lng'])
-
+        user_location_instance = UserLocation.objects.create(
+            request_log=request_log,  
+            lat=user_location['lat'],
+            lng=user_location['lng'],
+            user_id=user_id
+        )
         # Detect location from the image
         location_response = self.detect_location(file)
 
@@ -53,9 +82,10 @@ class FileUploadView(viewsets.ViewSet):
 
         # Store detected location in the database
         detected_location_instance = DetectedLocation.objects.create(
+            request_log=request_log,  # Link to request_log
             location_name=location_response.get('location_name', ''),
-            latitude=location_response['lat'],
-            longitude=location_response['lng']
+            lat=location_response['lat'],
+            lng=location_response['lng']
         )
 
         # Get directions and save each step in the database
@@ -78,18 +108,19 @@ class FileUploadView(viewsets.ViewSet):
                 distance = self.calculate_distance(guessed_coordinates, hotel_coords)
 
                 Hotel.objects.create(
+                    request_log=request_log,  # Link to request_log
                     detected_location=detected_location_instance,
                     name=hotel['name'],
                     address=hotel['address'],
                     rating=hotel.get('rating'),
-                    latitude=hotel['lat'],
-                    longitude=hotel['lng'],
+                    lat=hotel['lat'],
+                    lng=hotel['lng'],
                     image_url=hotel.get('image'),
                     distance=distance
                 )
-
         
         detected_location_serializer = DetectedLocationSerializer(detected_location_instance)
+        
         
         # Print the serialized data instead of the serializer instance
         print(detected_location_serializer.data)
@@ -129,13 +160,14 @@ class FileUploadView(viewsets.ViewSet):
             if landmark_annotations:
                 landmark = landmark_annotations[0]
                 location_name = landmark['description']
-                lat = landmark['locations'][0]['latLng']['latitude']
-                lng = landmark['locations'][0]['latLng']['longitude']
+                lat = landmark['locations'][0]['latLng']['lat']
+                lng = landmark['locations'][0]['latLng']['lng']
                 return {'location_name': location_name, 'lat': lat, 'lng': lng}
             else:
                 return self.detect_web_entities(content, openai_api_key, maps_api_key)
         else:
             return {'error': f"Vision API Error: {response.status_code}"}
+
 
     def detect_web_entities(self, content, openai_api_key, maps_api_key):
         request_data = {
