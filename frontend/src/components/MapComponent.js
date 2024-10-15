@@ -27,7 +27,7 @@ const MapComponent = ({ origin, destination }) => {
                 const directionsService = new window.google.maps.DirectionsService();
                 const result = await directionsService.route({
                     origin: new window.google.maps.LatLng(origin.lat, origin.lng),
-                    destination: new window.google.maps.LatLng(destination.lag, destination.lng),
+                    destination: new window.google.maps.LatLng(destination.lat, destination.lng),
                     travelMode: window.google.maps.TravelMode.DRIVING,
                 });
                 

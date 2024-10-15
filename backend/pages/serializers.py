@@ -11,12 +11,10 @@ class DirectionStepSerializer(serializers.ModelSerializer):
         model = DirectionStep
         fields = '__all__'
 
-
 class HotelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Hotel
         fields = '__all__'
-
 
 class DetectedLocationSerializer(serializers.ModelSerializer):
     directions = DirectionStepSerializer(many=True, read_only=True)
@@ -25,7 +23,6 @@ class DetectedLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = DetectedLocation
         fields = ['location_name', 'lat', 'lng', 'directions', 'hotels']
-
 
 class PagesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -38,4 +35,4 @@ class SearchHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RequestLog
-        fields = ['timestamp', 'user_ip', 'user_agent', 'user_id']
+        fields = ['timestamp', 'user_ip', 'user_agent', 'user_sub', 'user_locations', 'detected_locations']  # Added fields

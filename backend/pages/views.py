@@ -10,6 +10,7 @@ import base64
 import requests
 import json
 import openai
+from django.http import JsonResponse
 from io import BytesIO
 from django.conf import settings
 from .models import RequestLog, UserLocation, DetectedLocation, DirectionStep, Hotel
@@ -18,12 +19,25 @@ from rest_framework import generics
 
 class UserSearchHistoryView(generics.ListAPIView):
     serializer_class = SearchHistorySerializer
-
-    def get_queryset(self):
-        user_ip = self.request.GET.get('user_ip')
-        if user_ip:
-            return RequestLog.objects.filter(user_ip=user_ip).prefetch_related('user_locations', 'detected_locations')
-        return RequestLog.objects.none()  
+    
+    def get(self, request):
+        user_sub = request.GET.get('user_sub')  # Access 'user_sub' from the query parameters
+        
+        if user_sub:
+            # Retrieve logs for the user and prefetch related data for efficient queries
+            logs = RequestLog.objects.filter(user_sub=user_sub).prefetch_related(
+                'user_locations', 
+                'detected_locations__directions',
+                'detected_locations__hotels'
+            )
+            
+            if logs.exists():
+                serializer = self.serializer_class(logs, many=True)
+                return Response({'status': 'success', 'data': serializer.data}, status=status.HTTP_200_OK)
+            else:
+                return Response({'status': 'error', 'message': 'No history found for this user.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        return Response({'status': 'error', 'message': 'user_sub not provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
 class PagesView(viewsets.ModelViewSet):
     serializer_class = PagesSerializer
@@ -44,15 +58,15 @@ class FileUploadView(viewsets.ViewSet):
         print("request.data:", request.data)
         print("request.FILES:", request.FILES)
 
-
         request_log = RequestLog.objects.create(
             user_ip=request.META.get('REMOTE_ADDR'),  
-            user_agent=request.META.get('HTTP_USER_AGENT')  
+            user_agent=request.META.get('HTTP_USER_AGENT'),  
+            user_sub=request.data.get('user_sub')
         )
 
         file = request.FILES.get('file')
         user_location_data = request.data.get('user_location')
-        user_id = request.data.get('user_id')
+        
 
         if not file:
             return Response({"error": "File is required."}, status=400)
@@ -60,19 +74,17 @@ class FileUploadView(viewsets.ViewSet):
         if not user_location_data:
             return Response({"error": "user_location is required."}, status=400)
         
-        if not user_id:
-            return Response({"error": "user_id is required."}, status=400)
+
 
         try:
             user_location = json.loads(user_location_data)
         except json.JSONDecodeError:
             return Response({"error": "Invalid JSON format for user_location."}, status=400)
 
-        user_location_instance = UserLocation.objects.create(
+        UserLocation.objects.create(
             request_log=request_log,  
             lat=user_location['lat'],
             lng=user_location['lng'],
-            user_id=user_id
         )
         # Detect location from the image
         location_response = self.detect_location(file)

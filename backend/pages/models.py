@@ -4,7 +4,7 @@ class RequestLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     user_ip = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=500, null=True, blank=True)
-    user_id = models.CharField(max_length=500, null=True, blank=True)
+    user_sub = models.CharField(max_length=500, null=True, blank=True)
 
     def __str__(self):
         return f"Request at {self.timestamp}"
@@ -20,7 +20,7 @@ class UserLocation(models.Model):
     request_log = models.ForeignKey(RequestLog, on_delete=models.CASCADE, related_name="user_locations")
     lat = models.FloatField()
     lng = models.FloatField()
-    user_id = models.CharField(max_length=500)
+    
 
     def __str__(self):
         return f"UserLocation(lat={self.lat}, lng={self.lng})"
@@ -51,7 +51,7 @@ class Hotel(models.Model):
     rating = models.FloatField(null=True, blank=True)  
     lat = models.FloatField()
     lng = models.FloatField()
-    image_url = models.URLField(blank=True) 
+    image_url = models.CharField(max_length=1000) 
 
     distance = models.FloatField()
 

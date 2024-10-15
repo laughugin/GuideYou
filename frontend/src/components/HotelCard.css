@@ -1,12 +1,33 @@
 .hotel-card-container {
-    display: flex;
-    justify-content: center; /* Center the cards */
-    margin: 10px; /* Add some spacing between cards */
-  }
+  margin: 20px;
+  transition: transform 0.3s;
+}
+
+.card {
+  background: linear-gradient(to bottom, rgb(255, 255, 255), black); 
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  border: 2px solid ; 
+}
+
+.card:hover {
+  transform: scale(1.05); 
   
-  .card {
-    height: 400px; /* Set a fixed height */
-    width: 100%; /* Use 100% to fill the container */
-    overflow: hidden; /* Ensure content does not overflow */
-  }
-  
+  border: 3px solid white;   
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.card img {
+  transition: opacity 0.3s; 
+}
+
+.card:hover img {
+  opacity: 0.9; 
+}
+
+.card-content {
+  background: rgba(0, 0, 0, 0.8); 
+  color: white; 
+  padding: 15px;
+}
