@@ -21,10 +21,9 @@ class UserSearchHistoryView(generics.ListAPIView):
     serializer_class = SearchHistorySerializer
     
     def get(self, request):
-        user_sub = request.GET.get('user_sub')  # Access 'user_sub' from the query parameters
+        user_sub = request.GET.get('user_sub') 
         
         if user_sub:
-            # Retrieve logs for the user and prefetch related data for efficient queries
             logs = RequestLog.objects.filter(user_sub=user_sub).prefetch_related(
                 'user_locations', 
                 'detected_locations__directions',
@@ -86,13 +85,13 @@ class FileUploadView(viewsets.ViewSet):
             lat=user_location['lat'],
             lng=user_location['lng'],
         )
-        # Detect location from the image
+
         location_response = self.detect_location(file)
 
         if 'error' in location_response:
             return Response(location_response, status=400)
 
-        # Store detected location in the database
+
         detected_location_instance = DetectedLocation.objects.create(
             request_log=request_log,  # Link to request_log
             location_name=location_response.get('location_name', ''),
@@ -111,7 +110,6 @@ class FileUploadView(viewsets.ViewSet):
                     duration=step['duration']['text']
                 )
 
-        # Get nearby hotels and save each hotel in the database
         hotels = self.get_nearby_hotels(location_response)
         if 'error' not in hotels:
             guessed_coordinates = {'lat': location_response['lat'], 'lng': location_response['lng']}
@@ -120,7 +118,7 @@ class FileUploadView(viewsets.ViewSet):
                 distance = self.calculate_distance(guessed_coordinates, hotel_coords)
 
                 Hotel.objects.create(
-                    request_log=request_log,  # Link to request_log
+                    request_log=request_log,  
                     detected_location=detected_location_instance,
                     name=hotel['name'],
                     address=hotel['address'],
@@ -172,8 +170,8 @@ class FileUploadView(viewsets.ViewSet):
             if landmark_annotations:
                 landmark = landmark_annotations[0]
                 location_name = landmark['description']
-                lat = landmark['locations'][0]['latLng']['lat']
-                lng = landmark['locations'][0]['latLng']['lng']
+                lat = landmark['locations'][0]['latLng']['latitude']
+                lng = landmark['locations'][0]['latLng']['longitude']
                 return {'location_name': location_name, 'lat': lat, 'lng': lng}
             else:
                 return self.detect_web_entities(content, openai_api_key, maps_api_key)

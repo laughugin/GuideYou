@@ -9,7 +9,6 @@ class LocationHistory extends Component {
   }
 
   componentDidMount() {
-    // Fetch the search history from localStorage or from the server (if implemented)
     const savedHistory = localStorage.getItem('searchHistory');
     if (savedHistory) {
       this.setState({ searchHistory: JSON.parse(savedHistory) });

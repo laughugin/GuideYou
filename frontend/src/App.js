@@ -4,7 +4,7 @@ import DropzoneComponent from "./components/DropzoneComponent";
 import WelcomeSection from "./components/WelcomeSection";
 import Directions from "./components/Directions";
 import HotelList from './components/HotelList';
-import LocationHistory from "./components/LocationHistory";
+
 import { BrowserRouter as Router, Route, Link, Routes } from "react-router-dom";
 import { Slider, Typography, Box, Button, FormControl,Select, MenuItem, CircularProgress, IconButton } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -44,6 +44,8 @@ class App extends Component {
       userPayload: null,
       userName: '',
       userProfilePic: '',
+      viewHistory: false,  
+      searchHistory: [], 
     };
     this.welcomeRef = React.createRef();
     this.uploadRef = React.createRef();
@@ -52,8 +54,79 @@ class App extends Component {
   }
   
 
+  fetchSearchHistory = () => {
+    const { userPayload } = this.state;
+  
+    if (userPayload) {
+      axios
+      .get(`http://127.0.0.1:8000/api/user_search_history/?user_sub=${userPayload.sub}`)
+      .then(response => {
+        console.log("Search History Response:", response.data);
+    
+        const historyData = response.data.data;
+    
+        if (Array.isArray(historyData)) {
+          const searchHistory = historyData.map((entry) => {
+            if (Array.isArray(entry.detected_locations)) {
+              return entry.detected_locations.map((location) => {
+                return {
+                  location_name: location.location_name,
+                  timestamp: this.formatTimestamp(entry.timestamp), 
+                  lat: location.lat,    
+                  lng: location.lng,    
+                  directions: entry.directions, 
+                  hotels: entry.hotels  
+                };
+              });
+            }
+            return [];
+          });
+
+
+          this.setState({ searchHistory: searchHistory.flat() });
+        } else {
+          console.error("Error: response.data.data is not an array.");
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching user search history:", error);
+      });
+    
+    }
+  };
+  
+  formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString();  
+  };
+
+  toggleView = () => {
+    const { viewHistory } = this.state;
+    if (!viewHistory) {
+      this.fetchSearchHistory();  
+    }
+    this.setState(prevState => ({
+      viewHistory: !prevState.viewHistory
+    }));
+  };
+
   handleFilterToggle = () => {
     this.setState(prevState => ({ filterVisible: !prevState.filterVisible }));
+  };
+
+  handleHistoryClick = (location) => {
+    this.setState({
+      guessedCoordinates: { lat: location.lat, lng: location.lng },  // Set coordinates from history
+      directions: location.directions,  // Set directions from history
+      hotels: location.hotels,          // Set hotels from history
+      locationName: location.location_name,  // Set location name
+      uploadedFile: true,               // Set uploadedFile to true to trigger the UI change
+      dataFetched: true,                // Set dataFetched to true to show the map, directions, and hotels
+      directionsVisible: true,          // Ensure the directions are visible
+      viewHistory: false                // Ensure we leave history view
+    }, () => {
+      this.scrollToSection(this.directionsRef);  // Scroll to the directions section after updating the state
+    });
   };
 
   handleRatingChange = (event, newValue) => {
@@ -161,71 +234,59 @@ class App extends Component {
       userId: '',
       userName: '',
       userProfilePic: '',
+      searchHistory: [],
     });
   
-
     localStorage.removeItem('userPayload');
+    localStorage.removeItem('searchHistory');  
   
-    console.log("User logged out");
+    console.log("User logged out and search history cleared");
   };
   
   
 
   handleDrop = (acceptedFiles) => {
     const file = acceptedFiles[0];
-    const formData1 = new FormData();
-    const { userPayload,userLocation } = this.state;
-    axios.get(`http://127.0.0.1:8000/api/user_search_history/?user_sub=${userPayload.sub}`)
-    .then(response => {
-        console.log("hello",response.data);
-    })
-    .catch(error => {
-        console.error("Error fetching user search history:", error);
-    });
+    const { userPayload, userLocation } = this.state;
     const formData = new FormData();
     formData.append("file", file);
-    
-    
-    console.log(userPayload.sub);
-    formData.append("user_sub", userPayload.sub);
+  
+
+    if (userPayload && userPayload.sub) {
+      formData.append("user_sub", userPayload.sub);
+    }
+  
     if (userLocation) {
       formData.append("user_location", JSON.stringify(userLocation));
-      console.log(formData)
+      console.log(formData);
     } else {
       console.error("User location is not available");
     }
-
+  
     this.setState({ loading: true });
-
+  
     console.log(formData);
-
+  
     axios.post("http://127.0.0.1:8000/api/upload/", formData)
-    .then(response => {
-      const { directions, hotels, location, location_name, lat, lng } = response.data;
-      console.log("Response data from server:", response.data);
-      console.log("Directions:", directions);
-      console.log("Hotels:", hotels);
-      console.log("Location Name:", location_name);
-      console.log("destination coordinates:", lat, lng);
-      
-  
-
-  
-      this.setState({
-        directions,
-        hotels,
-        locationResponse: location,
-        locationName: location_name,
-        guessedCoordinates: {lat: lat, lng: lng},
-        uploadedFile: URL.createObjectURL(file),
-        loading: false,
-        dataFetched: true,
+      .then(response => {
+        const { directions, hotels, location, location_name, lat, lng } = response.data;
+        console.log("Response data from server:", response.data);
+        
+        this.setState({
+          directions,
+          hotels,
+          locationResponse: location,
+          locationName: location_name,
+          guessedCoordinates: { lat: lat, lng: lng },
+          uploadedFile: URL.createObjectURL(file),
+          loading: false,
+          dataFetched: true,
+        });
+      })
+      .catch(error => {
+        console.error("Error uploading file:", error);
+        this.setState({ loading: false });
       });
-    })
-    .catch(error => {
-      console.error("Error uploading file:", error);
-      this.setState({ loading: false });
-    });
   };
 
   renewUpload = () => {
@@ -272,227 +333,253 @@ class App extends Component {
 
   
   render() {
-    const {  directions, hotels, uploadedFile, loading, userLocation, sortOption, locationResponse, filterVisible,  directionsVisible, guessedCoordinates, userPayload, userName, userProfilePic, locationName } = this.state;
+    const {  directions, hotels, uploadedFile, loading, userLocation, sortOption, locationResponse, filterVisible,  directionsVisible, guessedCoordinates, userPayload, userName, userProfilePic, locationName, viewHistory, searchHistory } = this.state;
     let filteredHotels = this.filterHotels(hotels || []);
     let sortedHotels = this.sortHotels(filteredHotels, sortOption);
     const key = process.env.REACT_APP_GOOGLE_CLIENT_ID
 
     return (
       <GoogleOAuthProvider clientId={key}>
-        <main className="container" style={{ backgroundColor: '#000000', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-          <header style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            backgroundColor: '#000000',
-            padding: '10px',
-            zIndex: 1000,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <h1 style={{
-              color: '#ffffff',
-              marginLeft: '20px',
-              textTransform: 'uppercase'
+          <main className="container" style={{ backgroundColor: '#000000', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+            <header style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: '#000000',
+              padding: '10px',
+              zIndex: 1000,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
             }}>
-              TravelNavigator
-            </h1>
+              <h1 style={{ color: '#ffffff', marginLeft: '20px', textTransform: 'uppercase' }}>TravelNavigator</h1>
 
-            {userPayload ? (
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                <span style={{ color: 'white' }}>Welcome, {userName}!</span>
-                {userProfilePic && (
-                  <img
-                    src={userProfilePic}
-                    alt="Profile"
-                    style={{ width: '40px', height: '40px', borderRadius: '50%', marginLeft: '8px', border: '2px solid white' }}
-                  />
-                )}
-                
-                {/* Link to Location History when user is logged in */}
-                <Link to="/history" style={{ color: 'white', marginLeft: '20px', textDecoration: 'none' }}>
-                  My History
-                </Link>
-              
-                <Button onClick={this.handleLogout} variant="outlined" color="inherit" startIcon={<LogoutIcon />} style={{ marginLeft: '10px', color: 'white' }}>
-                  Logout
-                </Button>
-              </div>
-            ) : (
-              <GoogleLogin
-                onSuccess={this.handleLoginSuccess}
-                onError={() => console.log('Login Failed')}
-                size="large"
-                theme="filled_black"
-                text="signin"
-                shape="square"
-                render={renderProps => (
-                  <Button variant="outlined" color="inherit" startIcon={<GoogleIcon />} onClick={renderProps.onClick} disabled={renderProps.disabled}>
-                    Login with Google
+                {viewHistory ? (
+                  <Button variant="outlined" color="inherit" onClick={this.toggleView} style={{ marginRight: '10px', color: 'white' }}>
+                    Home
+                  </Button>
+                ) : (
+                  <Button variant="outlined" color="inherit" onClick={this.toggleView} style={{ marginRight: '10px', color: 'white' }}>
+                    History
                   </Button>
                 )}
-              />
-            )}
-          </header>
+
+                {userPayload ? (
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ color: 'white' }}>Welcome, {userName}!</span>
+                    {userProfilePic && (
+                      <img
+                        src={userProfilePic}
+                        alt="Profile"
+                        style={{ width: '40px', height: '40px', borderRadius: '50%', marginLeft: '8px', border: '2px solid white' }}
+                      />
+                    )}
+                    <Button onClick={this.handleLogout} variant="outlined" color="inherit" startIcon={<LogoutIcon />} style={{ marginLeft: '10px', color: 'white' }}>
+                      Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <GoogleLogin
+                    onSuccess={this.handleLoginSuccess}
+                    onError={() => console.log('Login Failed')}
+                    size="large"
+                    theme="filled_black"
+                    text="signin"
+                    shape="square"
+                    render={renderProps => (
+                      <Button variant="outlined" color="inherit" startIcon={<GoogleIcon />} onClick={renderProps.onClick} disabled={renderProps.disabled}>
+                        Login with Google
+                      </Button>
+                    )}
+                  />
+                )}
+              </div>
+            </header>
 
 
-
-        
-            <div ref={this.welcomeRef}>
-              <WelcomeSection onScrollDown={() => this.scrollToSection(this.uploadRef)} />
-            </div>
-            
-            <div ref={this.uploadRef} style={{ marginBottom: '80px', paddingBottom: '80%' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                <IconButton onClick={() => this.scrollToSection(this.welcomeRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
-                  <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
-                </IconButton>
-              </Box>
-            
-              {uploadedFile ? (
-                <div style={{ textAlign: 'center' }}>
-                  <h1 style={{ color: '#ffffff' }}>Detected Location: {locationName || 'Unknown'}</h1>
-                  <h3>Uploaded Image:</h3>
-                  <img src={uploadedFile} alt="Uploaded" style={{ width: '60%', height: '60%', borderRadius: '10px' }} />
-                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
+            {viewHistory ? (
+              <div style={{ paddingTop: '80px', color: 'white' }}>
+                <h2>User Search History</h2>
+                {searchHistory.length > 0 ? (
+                  <ul style={{ listStyleType: 'none', padding: 0 }}>
+                    {searchHistory.map((item, index) => (
+                      <li key={index} style={{ marginBottom: '10px' }}>
+                        <Button
+                          variant="outlined"
+                          color="inherit"
+                          onClick={() => this.handleHistoryClick(item)}
+                          style={{ width: '100%', color: 'white', textAlign: 'left' }}  // This ensures it looks nice and clickable
+                        >
+                          <div>
+                            <strong>Location:</strong> {item.location_name} <br />
+                            <strong>Seen on:</strong> {item.timestamp}
+                          </div>
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No search history available.</p>
+                )}
+              </div>
+            ) : (
+              <div style={{ paddingTop: '80px', color: 'white' }}>
+                <div ref={this.welcomeRef}>
+                  <WelcomeSection onScrollDown={() => this.scrollToSection(this.uploadRef)} />
+                </div>
+                
+                <div ref={this.uploadRef} style={{ marginBottom: '80px', paddingBottom: '80%' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                    <IconButton onClick={() => this.scrollToSection(this.welcomeRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
+                      <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
+                    </IconButton>
+                  </Box>
+                
+                  {uploadedFile ? (
+                    <div style={{ textAlign: 'center' }}>
+                      <h1 style={{ color: '#ffffff' }}>Detected Location: {locationName || 'Unknown'}</h1>
+                      <h3>Uploaded Image:</h3>
+                      <img src={uploadedFile} alt="Uploaded" style={{ width: '60%', height: '60%', borderRadius: '10px' }} />
+                      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={this.renewUpload}
+                          sx={{ fontSize: '16px', padding: '10px 20px', backgroundColor: '#000', color: '#fff', mt: 2, border: '3px solid white' }}
+                        >
+                          Try new image of a place
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <h1 style={{ textAlign: 'center', color: 'white', marginTop: "2%", marginBottom: '10%' }}>Start by uploading image of your desired place...</h1>
+                      <DropzoneComponent onDrop={this.handleDrop}>
+                        {loading && <CircularProgress style={{ marginTop: '10%' }} />}
+                      </DropzoneComponent>
+                    </div>
+                  )}
+                  {uploadedFile && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                      <IconButton onClick={() => this.scrollToSection(this.directionsRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
+                        <ArrowDropDownIcon sx={{ fontSize: '48px' }} />
+                      </IconButton>
+                    </Box>
+                    
+                  )}
+                </div>
+              
+                {uploadedFile && (
+                  <div ref={this.directionsRef} style={{ paddingBottom: '70%' }}> 
+                    <h1 style={{ color: 'white', textAlign: 'center' }}>How to get there?</h1>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                      <IconButton onClick={() => this.scrollToSection(this.uploadRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
+                        <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
+                      </IconButton>
+                    </Box>
+                    
+                    <MapComponent origin={userLocation} destination={guessedCoordinates} />
+                    
                     <Button
+                      onClick={this.toggleDirectionsVisibility}
                       variant="contained"
                       color="primary"
-                      onClick={this.renewUpload}
-                      sx={{ fontSize: '16px', padding: '10px 20px', backgroundColor: '#000', color: '#fff', mt: 2, border: '3px solid white' }}
+                      sx={{ display: 'block', backgroundColor: '#000', color: '#fff' }}
+                      endIcon={<ExpandMoreIcon />}
                     >
-                      Try new image of a place
+                      {directionsVisible ? "Hide Directions" : "Show Directions"}
                     </Button>
+
+                    <Collapse in={directionsVisible}>
+                      <Directions directions={directions} />
+                    </Collapse>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                      <IconButton onClick={() => this.scrollToSection(this.accommodationRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
+                        <ArrowDropDownIcon sx={{ fontSize: '48px' }} />
+                      </IconButton>
+                    </Box>
                   </div>
-                </div>
-              ) : (
-                <div>
-                  <h1 style={{ textAlign: 'center', color: 'white', marginTop: "2%", marginBottom: '10%' }}>Start by uploading image of your desired place...</h1>
-                  <DropzoneComponent onDrop={this.handleDrop}>
-                    {loading && <CircularProgress style={{ marginTop: '10%' }} />}
-                  </DropzoneComponent>
-                </div>
-              )}
-              {uploadedFile && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                  <IconButton onClick={() => this.scrollToSection(this.directionsRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
-                    <ArrowDropDownIcon sx={{ fontSize: '48px' }} />
-                  </IconButton>
-                </Box>
-                
-              )}
-            </div>
-          
-            {uploadedFile && (
-              <div ref={this.directionsRef} style={{ paddingBottom: '70%' }}> 
-                <h1 style={{ color: 'white', textAlign: 'center' }}>How to get there?</h1>
-                <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                  
-                  <IconButton onClick={() => this.scrollToSection(this.uploadRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
-                    <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
-                  </IconButton>
-                </Box>
-                <MapComponent
-                    origin={userLocation} 
-                    destination={guessedCoordinates}  
-                />
-                <Button
-                  onClick={this.toggleDirectionsVisibility}
-                  variant="contained"
-                  color="primary"
-                  sx={{ display: 'block', backgroundColor: '#000', color: '#fff' }}
-                  endIcon={<ExpandMoreIcon />}
-                >
-                  {directionsVisible ? "Hide Directions" : "Show Directions"}
-                </Button>
-            
-                <Collapse in={directionsVisible}>
-                  <Directions directions={directions} />
-                </Collapse>
-            
-                <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                  <IconButton onClick={() => this.scrollToSection(this.accommodationRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
-                    <ArrowDropDownIcon sx={{ fontSize: '48px' }} />
-                  </IconButton>
-                </Box>
-              </div>
-            )}
-            
-            {uploadedFile && (
-              <div style={{ paddingTop: '70%' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                  <IconButton onClick={() => this.scrollToSection(this.directionsRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
-                    <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
-                  </IconButton>
-                </Box>
-                <h2 className="text text-uppercase text-center my-4" style={{ color: '#ffffff' }}>Accommodation</h2>
-            
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <div ref={this.accommodationRef}>
-                    <Button
-                      variant="outlined"
-                      color="default"
-                      onClick={this.handleFilterToggle}
-                      sx={{ fontSize: '15px', padding: '5px 10px', backgroundColor: '#000', color: '#fff' }}
-                      startIcon={<FilterListIcon />}
-                    >
-                      {filterVisible ? "Hide Filters" : "Show Filters"}
-                    </Button>
-                  </div>
-            
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ color: '#ffffff', fontSize: '20px', marginRight: '8px' }}>Sort By</Typography>
-                    <FormControl sx={{ minWidth: 100, minHeight: 50 }}>
-                      <Select
-                        value={this.state.sortOption}
-                        onChange={(e) => this.setState({ sortOption: e.target.value })}
-                        sx={{
-                          fontSize: '15px',
-                          padding: '1px',
-                          backgroundColor: '#000',
-                          color: '#fff',
-                          border: '1px solid white',
-                        }}
-                      >
-                        <MenuItem value="distance">Distance</MenuItem>
-                        <MenuItem value="rating">Rating</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Box>
-                </Box>
-                    
-                {filterVisible && (
-                  <Box sx={{ marginBottom: '20px' }}>
-                    <Typography style={{ color: '#ffffff' }}>Filter by Distance:</Typography>
-                    <Slider
-                      value={this.state.filterDistance}
-                      onChange={(event, newValue) => this.setState({ filterDistance: newValue })}
-                      valueLabelDisplay="auto"
-                      min={0}
-                      max={5}
-                      step={0.1}
-                      sx={{ color: '#ffffff' }}
-                    />
-                    <Typography style={{ color: '#ffffff' }}>Filter by Rating:</Typography>
-                    <Slider
-                      value={this.state.filterRating}
-                      onChange={(event, newValue) => this.setState({ filterRating: newValue })}
-                      valueLabelDisplay="auto"
-                      min={0}
-                      max={5}
-                      step={0.1}
-                      sx={{ color: '#ffffff' }}
-                    />
-                  </Box>
                 )}
                 
-                <HotelList hotels={sortedHotels} />
+                {uploadedFile && (
+                  <div style={{ paddingTop: '70%' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                      <IconButton onClick={() => this.scrollToSection(this.directionsRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
+                        <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
+                      </IconButton>
+                    </Box>
+                    <h2 className="text text-uppercase text-center my-4" style={{ color: '#ffffff' }}>Accommodation</h2>
+                
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                      <div ref={this.accommodationRef}>
+                        <Button
+                          variant="outlined"
+                          color="default"
+                          onClick={this.handleFilterToggle}
+                          sx={{ fontSize: '15px', padding: '5px 10px', backgroundColor: '#000', color: '#fff' }}
+                          startIcon={<FilterListIcon />}
+                        >
+                          {filterVisible ? "Hide Filters" : "Show Filters"}
+                        </Button>
+                      </div>
+                
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography sx={{ color: '#ffffff', fontSize: '20px', marginRight: '8px' }}>Sort By</Typography>
+                        <FormControl sx={{ minWidth: 100, minHeight: 50 }}>
+                          <Select
+                            value={this.state.sortOption}
+                            onChange={(e) => this.setState({ sortOption: e.target.value })}
+                            sx={{
+                              fontSize: '15px',
+                              padding: '1px',
+                              backgroundColor: '#000',
+                              color: '#fff',
+                              border: '1px solid white',
+                            }}
+                          >
+                            <MenuItem value="distance">Distance</MenuItem>
+                            <MenuItem value="rating">Rating</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Box>
+                    </Box>
+                        
+                    {filterVisible && (
+                      <Box sx={{ marginBottom: '20px' }}>
+                        <Typography style={{ color: '#ffffff' }}>Filter by Distance:</Typography>
+                        <Slider
+                          value={this.state.filterDistance}
+                          onChange={(event, newValue) => this.setState({ filterDistance: newValue })}
+                          valueLabelDisplay="auto"
+                          min={0}
+                          max={5}
+                          step={0.1}
+                          sx={{ color: '#ffffff' }}
+                        />
+                        <Typography style={{ color: '#ffffff' }}>Filter by Rating:</Typography>
+                        <Slider
+                          value={this.state.filterRating}
+                          onChange={(event, newValue) => this.setState({ filterRating: newValue })}
+                          valueLabelDisplay="auto"
+                          min={0}
+                          max={5}
+                          step={0.1}
+                          sx={{ color: '#ffffff' }}
+                        />
+                      </Box>
+                    )}
+                    
+                    <HotelList hotels={sortedHotels} />
+                  </div>
+                )}
               </div>
             )}
-        
-        </main>
+
+          </main>
+          
       </GoogleOAuthProvider>
     );
   }
