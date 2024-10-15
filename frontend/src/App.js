@@ -279,226 +279,220 @@ class App extends Component {
 
     return (
       <GoogleOAuthProvider clientId={key}>
-        <Router>
-          <main className="container" style={{ backgroundColor: '#000000', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-            <header style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              backgroundColor: '#000000',
-              padding: '10px',
-              zIndex: 1000,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
+        <main className="container" style={{ backgroundColor: '#000000', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+          <header style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: '#000000',
+            padding: '10px',
+            zIndex: 1000,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <h1 style={{
+              color: '#ffffff',
+              marginLeft: '20px',
+              textTransform: 'uppercase'
             }}>
-              <h1 style={{
-                color: '#ffffff',
-                marginLeft: '20px',
-                textTransform: 'uppercase'
-              }}>
-                TravelNavigator
-              </h1>
+              TravelNavigator
+            </h1>
 
-              {userPayload ? (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <span style={{ color: 'white' }}>Welcome, {userName}!</span>
-                  {userProfilePic && (
-                    <img
-                      src={userProfilePic}
-                      alt="Profile"
-                      style={{ width: '40px', height: '40px', borderRadius: '50%', marginLeft: '8px', border: '2px solid white' }}
-                    />
-                  )}
-                  
-                  {/* Link to Location History when user is logged in */}
-                  <Link to="/history" style={{ color: 'white', marginLeft: '20px', textDecoration: 'none' }}>
-                    My History
-                  </Link>
+            {userPayload ? (
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ color: 'white' }}>Welcome, {userName}!</span>
+                {userProfilePic && (
+                  <img
+                    src={userProfilePic}
+                    alt="Profile"
+                    style={{ width: '40px', height: '40px', borderRadius: '50%', marginLeft: '8px', border: '2px solid white' }}
+                  />
+                )}
                 
-                  <Button onClick={this.handleLogout} variant="outlined" color="inherit" startIcon={<LogoutIcon />} style={{ marginLeft: '10px', color: 'white' }}>
-                    Logout
+                {/* Link to Location History when user is logged in */}
+                <Link to="/history" style={{ color: 'white', marginLeft: '20px', textDecoration: 'none' }}>
+                  My History
+                </Link>
+              
+                <Button onClick={this.handleLogout} variant="outlined" color="inherit" startIcon={<LogoutIcon />} style={{ marginLeft: '10px', color: 'white' }}>
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <GoogleLogin
+                onSuccess={this.handleLoginSuccess}
+                onError={() => console.log('Login Failed')}
+                size="large"
+                theme="filled_black"
+                text="signin"
+                shape="square"
+                render={renderProps => (
+                  <Button variant="outlined" color="inherit" startIcon={<GoogleIcon />} onClick={renderProps.onClick} disabled={renderProps.disabled}>
+                    Login with Google
                   </Button>
+                )}
+              />
+            )}
+          </header>
+
+
+
+        
+            <div ref={this.welcomeRef}>
+              <WelcomeSection onScrollDown={() => this.scrollToSection(this.uploadRef)} />
+            </div>
+            
+            <div ref={this.uploadRef} style={{ marginBottom: '80px', paddingBottom: '80%' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                <IconButton onClick={() => this.scrollToSection(this.welcomeRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
+                  <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
+                </IconButton>
+              </Box>
+            
+              {uploadedFile ? (
+                <div style={{ textAlign: 'center' }}>
+                  <h1 style={{ color: '#ffffff' }}>Detected Location: {locationName || 'Unknown'}</h1>
+                  <h3>Uploaded Image:</h3>
+                  <img src={uploadedFile} alt="Uploaded" style={{ width: '60%', height: '60%', borderRadius: '10px' }} />
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={this.renewUpload}
+                      sx={{ fontSize: '16px', padding: '10px 20px', backgroundColor: '#000', color: '#fff', mt: 2, border: '3px solid white' }}
+                    >
+                      Try new image of a place
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                <GoogleLogin
-                  onSuccess={this.handleLoginSuccess}
-                  onError={() => console.log('Login Failed')}
-                  size="large"
-                  theme="filled_black"
-                  text="signin"
-                  shape="square"
-                  render={renderProps => (
-                    <Button variant="outlined" color="inherit" startIcon={<GoogleIcon />} onClick={renderProps.onClick} disabled={renderProps.disabled}>
-                      Login with Google
-                    </Button>
-                  )}
-                />
+                <div>
+                  <h1 style={{ textAlign: 'center', color: 'white', marginTop: "2%", marginBottom: '10%' }}>Start by uploading image of your desired place...</h1>
+                  <DropzoneComponent onDrop={this.handleDrop}>
+                    {loading && <CircularProgress style={{ marginTop: '10%' }} />}
+                  </DropzoneComponent>
+                </div>
               )}
-            </header>
-
-
-
+              {uploadedFile && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                  <IconButton onClick={() => this.scrollToSection(this.directionsRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
+                    <ArrowDropDownIcon sx={{ fontSize: '48px' }} />
+                  </IconButton>
+                </Box>
+                
+              )}
+            </div>
           
-              <div ref={this.welcomeRef}>
-                <WelcomeSection onScrollDown={() => this.scrollToSection(this.uploadRef)} />
-              </div>
-              
-              <div ref={this.uploadRef} style={{ marginBottom: '80px', paddingBottom: '80%' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                  <IconButton onClick={() => this.scrollToSection(this.welcomeRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
+            {uploadedFile && (
+              <div ref={this.directionsRef} style={{ paddingBottom: '70%' }}> 
+                <h1 style={{ color: 'white', textAlign: 'center' }}>How to get there?</h1>
+                <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                  
+                  <IconButton onClick={() => this.scrollToSection(this.uploadRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
                     <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
                   </IconButton>
                 </Box>
-              
-                {uploadedFile ? (
-                  <div style={{ textAlign: 'center' }}>
-                    <h1 style={{ color: '#ffffff' }}>Detected Location: {locationName || 'Unknown'}</h1>
-                    <h3>Uploaded Image:</h3>
-                    <img src={uploadedFile} alt="Uploaded" style={{ width: '60%', height: '60%', borderRadius: '10px' }} />
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={this.renewUpload}
-                        sx={{ fontSize: '16px', padding: '10px 20px', backgroundColor: '#000', color: '#fff', mt: 2, border: '3px solid white' }}
-                      >
-                        Try new image of a place
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <h1 style={{ textAlign: 'center', color: 'white', marginTop: "2%", marginBottom: '10%' }}>Start by uploading image of your desired place...</h1>
-                    <DropzoneComponent onDrop={this.handleDrop}>
-                      {loading && <CircularProgress style={{ marginTop: '10%' }} />}
-                    </DropzoneComponent>
-                  </div>
-                )}
-                {uploadedFile && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                    <IconButton onClick={() => this.scrollToSection(this.directionsRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
-                      <ArrowDropDownIcon sx={{ fontSize: '48px' }} />
-                    </IconButton>
-                  </Box>
-                  
-                )}
-              </div>
+                <MapComponent
+                    origin={userLocation} 
+                    destination={guessedCoordinates}  
+                />
+                <Button
+                  onClick={this.toggleDirectionsVisibility}
+                  variant="contained"
+                  color="primary"
+                  sx={{ display: 'block', backgroundColor: '#000', color: '#fff' }}
+                  endIcon={<ExpandMoreIcon />}
+                >
+                  {directionsVisible ? "Hide Directions" : "Show Directions"}
+                </Button>
             
-              {uploadedFile && (
-                <div ref={this.directionsRef} style={{ paddingBottom: '70%' }}> 
-                  <h1 style={{ color: 'white', textAlign: 'center' }}>How to get there?</h1>
-                  <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                    
-                    <IconButton onClick={() => this.scrollToSection(this.uploadRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
-                      <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
-                    </IconButton>
-                  </Box>
-                  <MapComponent
-                      origin={userLocation} 
-                      destination={guessedCoordinates}  
-                  />
-                  <Button
-                    onClick={this.toggleDirectionsVisibility}
-                    variant="contained"
-                    color="primary"
-                    sx={{ display: 'block', backgroundColor: '#000', color: '#fff' }}
-                    endIcon={<ExpandMoreIcon />}
-                  >
-                    {directionsVisible ? "Hide Directions" : "Show Directions"}
-                  </Button>
-              
-                  <Collapse in={directionsVisible}>
-                    <Directions directions={directions} />
-                  </Collapse>
-              
-                  <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                    <IconButton onClick={() => this.scrollToSection(this.accommodationRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
-                      <ArrowDropDownIcon sx={{ fontSize: '48px' }} />
-                    </IconButton>
-                  </Box>
-                </div>
-              )}
-              
-              {uploadedFile && (
-                <div style={{ paddingTop: '70%' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                    <IconButton onClick={() => this.scrollToSection(this.directionsRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
-                      <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
-                    </IconButton>
-                  </Box>
-                  <h2 className="text text-uppercase text-center my-4" style={{ color: '#ffffff' }}>Accommodation</h2>
-              
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <div ref={this.accommodationRef}>
-                      <Button
-                        variant="outlined"
-                        color="default"
-                        onClick={this.handleFilterToggle}
-                        sx={{ fontSize: '15px', padding: '5px 10px', backgroundColor: '#000', color: '#fff' }}
-                        startIcon={<FilterListIcon />}
+                <Collapse in={directionsVisible}>
+                  <Directions directions={directions} />
+                </Collapse>
+            
+                <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                  <IconButton onClick={() => this.scrollToSection(this.accommodationRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
+                    <ArrowDropDownIcon sx={{ fontSize: '48px' }} />
+                  </IconButton>
+                </Box>
+              </div>
+            )}
+            
+            {uploadedFile && (
+              <div style={{ paddingTop: '70%' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                  <IconButton onClick={() => this.scrollToSection(this.directionsRef)} sx={{ backgroundColor: '#000', color: '#fff' }}>
+                    <ArrowDropUpIcon sx={{ fontSize: '48px' }} />
+                  </IconButton>
+                </Box>
+                <h2 className="text text-uppercase text-center my-4" style={{ color: '#ffffff' }}>Accommodation</h2>
+            
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <div ref={this.accommodationRef}>
+                    <Button
+                      variant="outlined"
+                      color="default"
+                      onClick={this.handleFilterToggle}
+                      sx={{ fontSize: '15px', padding: '5px 10px', backgroundColor: '#000', color: '#fff' }}
+                      startIcon={<FilterListIcon />}
+                    >
+                      {filterVisible ? "Hide Filters" : "Show Filters"}
+                    </Button>
+                  </div>
+            
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography sx={{ color: '#ffffff', fontSize: '20px', marginRight: '8px' }}>Sort By</Typography>
+                    <FormControl sx={{ minWidth: 100, minHeight: 50 }}>
+                      <Select
+                        value={this.state.sortOption}
+                        onChange={(e) => this.setState({ sortOption: e.target.value })}
+                        sx={{
+                          fontSize: '15px',
+                          padding: '1px',
+                          backgroundColor: '#000',
+                          color: '#fff',
+                          border: '1px solid white',
+                        }}
                       >
-                        {filterVisible ? "Hide Filters" : "Show Filters"}
-                      </Button>
-                    </div>
-              
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography sx={{ color: '#ffffff', fontSize: '20px', marginRight: '8px' }}>Sort By</Typography>
-                      <FormControl sx={{ minWidth: 100, minHeight: 50 }}>
-                        <Select
-                          value={this.state.sortOption}
-                          onChange={(e) => this.setState({ sortOption: e.target.value })}
-                          sx={{
-                            fontSize: '15px',
-                            padding: '1px',
-                            backgroundColor: '#000',
-                            color: '#fff',
-                            border: '1px solid white',
-                          }}
-                        >
-                          <MenuItem value="distance">Distance</MenuItem>
-                          <MenuItem value="rating">Rating</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Box>
+                        <MenuItem value="distance">Distance</MenuItem>
+                        <MenuItem value="rating">Rating</MenuItem>
+                      </Select>
+                    </FormControl>
                   </Box>
-                      
-                  {filterVisible && (
-                    <Box sx={{ marginBottom: '20px' }}>
-                      <Typography style={{ color: '#ffffff' }}>Filter by Distance:</Typography>
-                      <Slider
-                        value={this.state.filterDistance}
-                        onChange={(event, newValue) => this.setState({ filterDistance: newValue })}
-                        valueLabelDisplay="auto"
-                        min={0}
-                        max={5}
-                        step={0.1}
-                        sx={{ color: '#ffffff' }}
-                      />
-                      <Typography style={{ color: '#ffffff' }}>Filter by Rating:</Typography>
-                      <Slider
-                        value={this.state.filterRating}
-                        onChange={(event, newValue) => this.setState({ filterRating: newValue })}
-                        valueLabelDisplay="auto"
-                        min={0}
-                        max={5}
-                        step={0.1}
-                        sx={{ color: '#ffffff' }}
-                      />
-                    </Box>
-                  )}
-                  
-                  <HotelList hotels={sortedHotels} />
-                </div>
-              )}
-          
-          </main>
-        </Router>
-        <Routes>
-            <Route path="/" element={<WelcomeSection />} />
-            <Route path="/history" element={<LocationHistory />} />
-        </Routes>
+                </Box>
+                    
+                {filterVisible && (
+                  <Box sx={{ marginBottom: '20px' }}>
+                    <Typography style={{ color: '#ffffff' }}>Filter by Distance:</Typography>
+                    <Slider
+                      value={this.state.filterDistance}
+                      onChange={(event, newValue) => this.setState({ filterDistance: newValue })}
+                      valueLabelDisplay="auto"
+                      min={0}
+                      max={5}
+                      step={0.1}
+                      sx={{ color: '#ffffff' }}
+                    />
+                    <Typography style={{ color: '#ffffff' }}>Filter by Rating:</Typography>
+                    <Slider
+                      value={this.state.filterRating}
+                      onChange={(event, newValue) => this.setState({ filterRating: newValue })}
+                      valueLabelDisplay="auto"
+                      min={0}
+                      max={5}
+                      step={0.1}
+                      sx={{ color: '#ffffff' }}
+                    />
+                  </Box>
+                )}
+                
+                <HotelList hotels={sortedHotels} />
+              </div>
+            )}
+        
+        </main>
       </GoogleOAuthProvider>
     );
   }
