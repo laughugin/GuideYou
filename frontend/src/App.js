@@ -74,8 +74,8 @@ class App extends Component {
                   timestamp: this.formatTimestamp(entry.timestamp), 
                   lat: location.lat,    
                   lng: location.lng,    
-                  directions: entry.directions, 
-                  hotels: entry.hotels  
+                  directions: location.directions, 
+                  hotels: location.hotels  
                 };
               });
             }
@@ -115,6 +115,7 @@ class App extends Component {
   };
 
   handleHistoryClick = (location) => {
+    console.log(location)
     this.setState({
       guessedCoordinates: { lat: location.lat, lng: location.lng },  // Set coordinates from history
       directions: location.directions,  // Set directions from history
@@ -126,6 +127,13 @@ class App extends Component {
       viewHistory: false                // Ensure we leave history view
     }, () => {
       this.scrollToSection(this.directionsRef);  // Scroll to the directions section after updating the state
+      console.log(this.directions);
+      console.log(this.hotels);
+      console.log(this.locationName);
+      console.log(this.guessedCoordinates);
+      console.log(this.guessedCoordinates);
+      
+    
     });
   };
 

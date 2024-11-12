@@ -32,6 +32,7 @@ class UserSearchHistoryView(generics.ListAPIView):
             
             if logs.exists():
                 serializer = self.serializer_class(logs, many=True)
+                print(serializer.data)
                 return Response({'status': 'success', 'data': serializer.data}, status=status.HTTP_200_OK)
             else:
                 return Response({'status': 'error', 'message': 'No history found for this user.'}, status=status.HTTP_404_NOT_FOUND)

@@ -51,7 +51,7 @@ class Hotel(models.Model):
     rating = models.FloatField(null=True, blank=True)  
     lat = models.FloatField()
     lng = models.FloatField()
-    image_url = models.CharField(max_length=1000) 
+    image_url = models.CharField(max_length=1000, null=True, blank=True) 
 
     distance = models.FloatField()
 
